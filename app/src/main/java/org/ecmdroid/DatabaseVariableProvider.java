@@ -221,37 +221,100 @@ public class DatabaseVariableProvider extends VariableProvider {
 		Variable ret = null;
 		if (cursor.moveToFirst()) {
 			ret = new Variable();
-			ret.setId(cursor.getInt(cursor.getColumnIndex("uniqueid")));
-			ret.setEcmType(ECM.Type.getType(cursor.getString(cursor.getColumnIndex("ecm_type"))));
-			ret.setName(cursor.getString(cursor.getColumnIndex("origname")));
-			if (ret.getName() == null) {
-				ret.setName(cursor.getString(cursor.getColumnIndex("varname")));
+			int uniqueidIdx = cursor.getColumnIndex("uniqueid");
+			if (uniqueidIdx >= 0) {
+				ret.setId(cursor.getInt(uniqueidIdx));
 			}
-			String type = cursor.getString(cursor.getColumnIndex("type")).toUpperCase(Locale.ENGLISH);
-			ret.setType(DataType.valueOf(type));
-			ret.setSize(cursor.getInt(cursor.getColumnIndex("size")));
+			int ecmTypeIdx = cursor.getColumnIndex("ecm_type");
+			if (ecmTypeIdx >= 0) {
+				ret.setEcmType(ECM.Type.getType(cursor.getString(ecmTypeIdx)));
+			}
+			int orignameIdx = cursor.getColumnIndex("origname");
+			if (orignameIdx >= 0) {
+				ret.setName(cursor.getString(orignameIdx));
+			}
+			if (ret.getName() == null) {
+				int varnameIdx = cursor.getColumnIndex("varname");
+				if (varnameIdx >= 0) {
+					ret.setName(cursor.getString(varnameIdx));
+				}
+			}
+			int typeIdx = cursor.getColumnIndex("type");
+			if (typeIdx >= 0) {
+				String type = cursor.getString(typeIdx).toUpperCase(Locale.ENGLISH);
+				ret.setType(DataType.valueOf(type));
+			}
+			int sizeIdx = cursor.getColumnIndex("size");
+			if (sizeIdx >= 0) {
+				ret.setSize(cursor.getInt(sizeIdx));
+			}
 			if (DataSource.EEPROM.equals(runtimeData)) {
-				ret.setWidth(cursor.getInt(cursor.getColumnIndex("elemsize")));
-				ret.setCols(cursor.getInt(cursor.getColumnIndex("cols")));
-				ret.setRows(cursor.getInt(cursor.getColumnIndex("rows")));
+				int elemsizeIdx = cursor.getColumnIndex("elemsize");
+				if (elemsizeIdx >= 0) {
+					ret.setWidth(cursor.getInt(elemsizeIdx));
+				}
+				int colsIdx = cursor.getColumnIndex("cols");
+				if (colsIdx >= 0) {
+					ret.setCols(cursor.getInt(colsIdx));
+				}
+				int rowsIdx = cursor.getColumnIndex("rows");
+				if (rowsIdx >= 0) {
+					ret.setRows(cursor.getInt(rowsIdx));
+				}
 			} else {
 				ret.setWidth(ret.getSize());
 			}
-			ret.setOffset(cursor.getInt(cursor.getColumnIndex("offset")));
-			ret.setScale(cursor.getDouble(cursor.getColumnIndex("scale")));
-			ret.setTranslate(cursor.getDouble(cursor.getColumnIndex("translate")));
-			ret.setFormat(cursor.getString(cursor.getColumnIndex("format")));
-			ret.setLabel(cursor.getString(cursor.getColumnIndex("name")));
-			ret.setRemarks(cursor.getString(cursor.getColumnIndex("remark")));
-			ret.setDescription(cursor.getString(cursor.getColumnIndex("description")));
-			ret.setUnit(cursor.getString(cursor.getColumnIndex("units")));
+			int offsetIdx = cursor.getColumnIndex("offset");
+			if (offsetIdx >= 0) {
+				ret.setOffset(cursor.getInt(offsetIdx));
+			}
+			int scaleIdx = cursor.getColumnIndex("scale");
+			if (scaleIdx >= 0) {
+				ret.setScale(cursor.getDouble(scaleIdx));
+			}
+			int translateIdx = cursor.getColumnIndex("translate");
+			if (translateIdx >= 0) {
+				ret.setTranslate(cursor.getDouble(translateIdx));
+			}
+			int formatIdx = cursor.getColumnIndex("format");
+			if (formatIdx >= 0) {
+				ret.setFormat(cursor.getString(formatIdx));
+			}
+			int nameIdx = cursor.getColumnIndex("name");
+			if (nameIdx >= 0) {
+				ret.setLabel(cursor.getString(nameIdx));
+			}
+			int remarkIdx = cursor.getColumnIndex("remark");
+			if (remarkIdx >= 0) {
+				ret.setRemarks(cursor.getString(remarkIdx));
+			}
+			int descriptionIdx = cursor.getColumnIndex("description");
+			if (descriptionIdx >= 0) {
+				ret.setDescription(cursor.getString(descriptionIdx));
+			}
+			int unitsIdx = cursor.getColumnIndex("units");
+			if (unitsIdx >= 0) {
+				ret.setUnit(cursor.getString(unitsIdx));
+			}
 			ret.setSymbol(Units.getSymbol(ret.getUnit()));
 
 			if (DataSource.RUNTIME_DATA.equals(runtimeData)) {
-				ret.setLow(cursor.getDouble(cursor.getColumnIndex("low")));
-				ret.setHigh(cursor.getDouble(cursor.getColumnIndex("high")));
-				ret.setUlow(cursor.getInt(cursor.getColumnIndex("ulow")));
-				ret.setUhigh(cursor.getInt(cursor.getColumnIndex("uhigh")));
+				int lowIdx = cursor.getColumnIndex("low");
+				if (lowIdx >= 0) {
+					ret.setLow(cursor.getDouble(lowIdx));
+				}
+				int highIdx = cursor.getColumnIndex("high");
+				if (highIdx >= 0) {
+					ret.setHigh(cursor.getDouble(highIdx));
+				}
+				int ulowIdx = cursor.getColumnIndex("ulow");
+				if (ulowIdx >= 0) {
+					ret.setUlow(cursor.getInt(ulowIdx));
+				}
+				int uhighIdx = cursor.getColumnIndex("uhigh");
+				if (uhighIdx >= 0) {
+					ret.setUhigh(cursor.getInt(uhighIdx));
+				}
 			}
 			ret.init();
 		}

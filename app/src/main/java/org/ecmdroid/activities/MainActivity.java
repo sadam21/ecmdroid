@@ -268,7 +268,22 @@ public class MainActivity extends AppCompatActivity
 
 		int i = 0;
 		for (BluetoothDevice device : devices) {
-			items[i++] = device.getName() + " (" + device.getAddress() + ")";
+			String deviceName = null;
+			try {
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+					if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+						deviceName = device.getName();
+					}
+				} else {
+					deviceName = device.getName();
+				}
+			} catch (SecurityException e) {
+				// Permission denied
+			}
+			if (deviceName == null) {
+				deviceName = getString(R.string.ble_unnamed);
+			}
+			items[i++] = deviceName + " (" + device.getAddress() + ")";
 		}
 
 		builder.setItems(items, new DialogInterface.OnClickListener() {
@@ -380,7 +395,20 @@ public class MainActivity extends AppCompatActivity
 		protected Exception doInBackground(Void... v) {
 			String target = null;
 			if (btDevice != null) {
-				target = btDevice.getName();
+				try {
+					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+						if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+							target = btDevice.getName();
+						}
+					} else {
+						target = btDevice.getName();
+					}
+				} catch (SecurityException e) {
+					// Permission denied
+				}
+				if (target == null) {
+					target = btDevice.getAddress();
+				}
 			} else {
 				target = host + ":" + port;
 			}

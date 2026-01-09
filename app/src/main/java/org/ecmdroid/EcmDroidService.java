@@ -122,7 +122,9 @@ public class EcmDroidService extends Service {
 			return;
 		}
 		this.recordingInterval = interval;
-		sendBroadcast(new Intent(RECORDING_STARTED));
+		Intent recordingStartedIntent = new Intent(RECORDING_STARTED);
+		recordingStartedIntent.setPackage(getPackageName());
+		sendBroadcast(recordingStartedIntent);
 		bytesLogged = recordsLogged = readFailures = 0;
 		currentLog = new DataOutputStream(logStream);
 		String id = "UNKWN";
@@ -156,7 +158,9 @@ public class EcmDroidService extends Service {
 		Log.i(TAG, "Recording stopped.");
 		ecm.setRecording(false);
 		recordingInterval = 0;
-		sendBroadcast(new Intent(RECORDING_STOPPED));
+		Intent recordingStoppedIntent = new Intent(RECORDING_STOPPED);
+		recordingStoppedIntent.setPackage(getPackageName());
+		sendBroadcast(recordingStoppedIntent);
 	}
 
 	public boolean isRecording() {

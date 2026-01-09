@@ -129,7 +129,19 @@ public class SerialSocket extends BluetoothGattCallback {
 	}
 
 	public String getName() {
-		return device.getName() != null ? device.getName() : device.getAddress();
+		String name = null;
+		try {
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+				if (context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+					name = device.getName();
+				}
+			} else {
+				name = device.getName();
+			}
+		} catch (SecurityException e) {
+			// Permission denied
+		}
+		return name != null ? name : device.getAddress();
 	}
 
 	public void disconnect() {
@@ -147,10 +159,26 @@ public class SerialSocket extends BluetoothGattCallback {
 			delegate.disconnect();
 		if (gatt != null) {
 			Log.d(TAG, "gatt.disconnect");
-			gatt.disconnect();
+			try {
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+					if (context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+						gatt.disconnect();
+					}
+				} else {
+					gatt.disconnect();
+				}
+			} catch (SecurityException e) {
+				Log.e(TAG, "Permission denied for disconnect", e);
+			}
 			Log.d(TAG, "gatt.close");
 			try {
-				gatt.close();
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+					if (context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+						gatt.close();
+					}
+				} else {
+					gatt.close();
+				}
 			} catch (Exception ignored) {}
 			gatt = null;
 			connected = false;
@@ -173,15 +201,28 @@ public class SerialSocket extends BluetoothGattCallback {
 			throw new IOException("already connected");
 		canceled = false;
 		this.listener = listener;
-		context.registerReceiver(disconnectBroadcastReceiver, new IntentFilter(Constants.INTENT_ACTION_DISCONNECT));
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+			context.registerReceiver(disconnectBroadcastReceiver, new IntentFilter(Constants.INTENT_ACTION_DISCONNECT), android.content.Context.RECEIVER_NOT_EXPORTED);
+		} else {
+			context.registerReceiver(disconnectBroadcastReceiver, new IntentFilter(Constants.INTENT_ACTION_DISCONNECT));
+		}
 		Log.d(TAG, "connect "+device);
 		context.registerReceiver(pairingBroadcastReceiver, pairingIntentFilter);
-		if (Build.VERSION.SDK_INT < 23) {
-			Log.d(TAG, "connectGatt");
-			gatt = device.connectGatt(context, false, this);
-		} else {
-			Log.d(TAG, "connectGatt,LE");
-			gatt = device.connectGatt(context, false, this, BluetoothDevice.TRANSPORT_LE);
+		try {
+			// minSdk is 26, so SDK_INT is always >= 23
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+				if (context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+					Log.d(TAG, "connectGatt,LE");
+					gatt = device.connectGatt(context, false, this, BluetoothDevice.TRANSPORT_LE);
+				} else {
+					throw new IOException("BLUETOOTH_CONNECT permission not granted");
+				}
+			} else {
+				Log.d(TAG, "connectGatt,LE");
+				gatt = device.connectGatt(context, false, this, BluetoothDevice.TRANSPORT_LE);
+			}
+		} catch (SecurityException e) {
+			throw new IOException("Permission denied for connectGatt", e);
 		}
 		if (gatt == null)
 			throw new IOException("connectGatt failed");
@@ -217,8 +258,21 @@ public class SerialSocket extends BluetoothGattCallback {
 		// status directly taken from gat_api.h, e.g. 133=0x85=GATT_ERROR ~= timeout
 		if (newState == BluetoothProfile.STATE_CONNECTED) {
 			Log.d(TAG,"connect status "+status+", discoverServices");
-			if (!gatt.discoverServices())
-				onSerialConnectError(new IOException("discoverServices failed"));
+			try {
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+					if (context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+						if (!gatt.discoverServices())
+							onSerialConnectError(new IOException("discoverServices failed"));
+					} else {
+						onSerialConnectError(new IOException("BLUETOOTH_CONNECT permission not granted"));
+					}
+				} else {
+					if (!gatt.discoverServices())
+						onSerialConnectError(new IOException("discoverServices failed"));
+				}
+			} catch (SecurityException e) {
+				onSerialConnectError(new IOException("Permission denied for discoverServices", e));
+			}
 		} else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
 			if (connected)
 				onSerialIoError     (new IOException("gatt status " + status));
@@ -272,13 +326,25 @@ public class SerialSocket extends BluetoothGattCallback {
 	}
 
 	private void connectCharacteristics2(BluetoothGatt gatt) {
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+		// minSdk is 26, so SDK_INT is always >= LOLLIPOP
+		{
 			Log.d(TAG, "request max MTU");
-			if (!gatt.requestMtu(MAX_MTU))
-				onSerialConnectError(new IOException("request MTU failed"));
+			try {
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+					if (context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+						if (!gatt.requestMtu(MAX_MTU))
+							onSerialConnectError(new IOException("request MTU failed"));
+					} else {
+						onSerialConnectError(new IOException("BLUETOOTH_CONNECT permission not granted"));
+					}
+				} else {
+					if (!gatt.requestMtu(MAX_MTU))
+						onSerialConnectError(new IOException("request MTU failed"));
+				}
+			} catch (SecurityException e) {
+				onSerialConnectError(new IOException("Permission denied for requestMtu", e));
+			}
 			// continues asynchronously in onMtuChanged
-		} else {
-			connectCharacteristics3(gatt);
 		}
 	}
 
@@ -299,8 +365,25 @@ public class SerialSocket extends BluetoothGattCallback {
 			onSerialConnectError(new IOException("write characteristic not writable"));
 			return;
 		}
-		if(!gatt.setCharacteristicNotification(readCharacteristic,true)) {
-			onSerialConnectError(new IOException("no notification for read characteristic"));
+		try {
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+				if (context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+					if(!gatt.setCharacteristicNotification(readCharacteristic,true)) {
+						onSerialConnectError(new IOException("no notification for read characteristic"));
+						return;
+					}
+				} else {
+					onSerialConnectError(new IOException("BLUETOOTH_CONNECT permission not granted"));
+					return;
+				}
+			} else {
+				if(!gatt.setCharacteristicNotification(readCharacteristic,true)) {
+					onSerialConnectError(new IOException("no notification for read characteristic"));
+					return;
+				}
+			}
+		} catch (SecurityException e) {
+			onSerialConnectError(new IOException("Permission denied for setCharacteristicNotification", e));
 			return;
 		}
 		BluetoothGattDescriptor readDescriptor = readCharacteristic.getDescriptor(BLUETOOTH_LE_CCCD);
@@ -320,8 +403,22 @@ public class SerialSocket extends BluetoothGattCallback {
 			return;
 		}
 		Log.d(TAG,"writing read characteristic descriptor");
-		if(!gatt.writeDescriptor(readDescriptor)) {
-			onSerialConnectError(new IOException("read characteristic CCCD descriptor not writable"));
+		try {
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+				if (context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+					if(!gatt.writeDescriptor(readDescriptor)) {
+						onSerialConnectError(new IOException("read characteristic CCCD descriptor not writable"));
+					}
+				} else {
+					onSerialConnectError(new IOException("BLUETOOTH_CONNECT permission not granted"));
+				}
+			} else {
+				if(!gatt.writeDescriptor(readDescriptor)) {
+					onSerialConnectError(new IOException("read characteristic CCCD descriptor not writable"));
+				}
+			}
+		} catch (SecurityException e) {
+			onSerialConnectError(new IOException("Permission denied for writeDescriptor", e));
 		}
 		// continues asynchronously in onDescriptorWrite()
 	}
@@ -393,10 +490,26 @@ public class SerialSocket extends BluetoothGattCallback {
 		}
 		if(data0 != null) {
 			writeCharacteristic.setValue(data0);
-			if (!gatt.writeCharacteristic(writeCharacteristic)) {
-				onSerialIoError(new IOException("write failed"));
-			} else {
-				// Log.d(TAG,"write started, len="+data0.length);
+			try {
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+					if (context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+						if (!gatt.writeCharacteristic(writeCharacteristic)) {
+							onSerialIoError(new IOException("write failed"));
+						} else {
+							// Log.d(TAG,"write started, len="+data0.length);
+						}
+					} else {
+						onSerialIoError(new IOException("BLUETOOTH_CONNECT permission not granted"));
+					}
+				} else {
+					if (!gatt.writeCharacteristic(writeCharacteristic)) {
+						onSerialIoError(new IOException("write failed"));
+					} else {
+						// Log.d(TAG,"write started, len="+data0.length);
+					}
+				}
+			} catch (SecurityException e) {
+				onSerialIoError(new IOException("Permission denied for writeCharacteristic", e));
 			}
 		}
 		// continues asynchronously in onCharacteristicWrite()
@@ -432,10 +545,26 @@ public class SerialSocket extends BluetoothGattCallback {
 		}
 		if(data != null) {
 			writeCharacteristic.setValue(data);
-			if (!gatt.writeCharacteristic(writeCharacteristic)) {
-				onSerialIoError(new IOException("write failed"));
-			} else {
-				// Log.d(TAG,"write started, len="+data.length);
+			try {
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+					if (context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+						if (!gatt.writeCharacteristic(writeCharacteristic)) {
+							onSerialIoError(new IOException("write failed"));
+						} else {
+							// Log.d(TAG,"write started, len="+data.length);
+						}
+					} else {
+						onSerialIoError(new IOException("BLUETOOTH_CONNECT permission not granted"));
+					}
+				} else {
+					if (!gatt.writeCharacteristic(writeCharacteristic)) {
+						onSerialIoError(new IOException("write failed"));
+					} else {
+						// Log.d(TAG,"write started, len="+data.length);
+					}
+				}
+			} catch (SecurityException e) {
+				onSerialIoError(new IOException("Permission denied for writeCharacteristic", e));
 			}
 		}
 	}
@@ -547,8 +676,25 @@ public class SerialSocket extends BluetoothGattCallback {
 				onSerialConnectError(new IOException("write credits characteristic not found"));
 				return false;
 			}
-			if (!gatt.setCharacteristicNotification(readCreditsCharacteristic, true)) {
-				onSerialConnectError(new IOException("no notification for read credits characteristic"));
+			try {
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+					if (context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+						if (!gatt.setCharacteristicNotification(readCreditsCharacteristic, true)) {
+							onSerialConnectError(new IOException("no notification for read credits characteristic"));
+							return false;
+						}
+					} else {
+						onSerialConnectError(new IOException("BLUETOOTH_CONNECT permission not granted"));
+						return false;
+					}
+				} else {
+					if (!gatt.setCharacteristicNotification(readCreditsCharacteristic, true)) {
+						onSerialConnectError(new IOException("no notification for read credits characteristic"));
+						return false;
+					}
+				}
+			} catch (SecurityException e) {
+				onSerialConnectError(new IOException("Permission denied for setCharacteristicNotification", e));
 				return false;
 			}
 			BluetoothGattDescriptor readCreditsDescriptor = readCreditsCharacteristic.getDescriptor(BLUETOOTH_LE_CCCD);
@@ -558,8 +704,25 @@ public class SerialSocket extends BluetoothGattCallback {
 			}
 			readCreditsDescriptor.setValue(BluetoothGattDescriptor.ENABLE_INDICATION_VALUE);
 			Log.d(TAG,"writing read credits characteristic descriptor");
-			if (!gatt.writeDescriptor(readCreditsDescriptor)) {
-				onSerialConnectError(new IOException("read credits characteristic CCCD descriptor not writable"));
+			try {
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+					if (context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+						if (!gatt.writeDescriptor(readCreditsDescriptor)) {
+							onSerialConnectError(new IOException("read credits characteristic CCCD descriptor not writable"));
+							return false;
+						}
+					} else {
+						onSerialConnectError(new IOException("BLUETOOTH_CONNECT permission not granted"));
+						return false;
+					}
+				} else {
+					if (!gatt.writeDescriptor(readCreditsDescriptor)) {
+						onSerialConnectError(new IOException("read credits characteristic CCCD descriptor not writable"));
+						return false;
+					}
+				}
+			} catch (SecurityException e) {
+				onSerialConnectError(new IOException("Permission denied for writeDescriptor", e));
 				return false;
 			}
 			Log.d(TAG, "writing read credits characteristic descriptor");
@@ -648,11 +811,34 @@ public class SerialSocket extends BluetoothGattCallback {
 				byte[] data = new byte[] {(byte)newCredits};
 				Log.d(TAG, "grant read credits +"+newCredits+" ="+readCredits);
 				writeCreditsCharacteristic.setValue(data);
-				if (!gatt.writeCharacteristic(writeCreditsCharacteristic)) {
+				try {
+					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+						if (context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+							if (!gatt.writeCharacteristic(writeCreditsCharacteristic)) {
+								if(connected)
+									onSerialIoError(new IOException("write read credits failed"));
+								else
+									onSerialConnectError(new IOException("write read credits failed"));
+							}
+						} else {
+							if(connected)
+								onSerialIoError(new IOException("BLUETOOTH_CONNECT permission not granted"));
+							else
+								onSerialConnectError(new IOException("BLUETOOTH_CONNECT permission not granted"));
+						}
+					} else {
+						if (!gatt.writeCharacteristic(writeCreditsCharacteristic)) {
+							if(connected)
+								onSerialIoError(new IOException("write read credits failed"));
+							else
+								onSerialConnectError(new IOException("write read credits failed"));
+						}
+					}
+				} catch (SecurityException e) {
 					if(connected)
-						onSerialIoError(new IOException("write read credits failed"));
+						onSerialIoError(new IOException("Permission denied for writeCharacteristic", e));
 					else
-						onSerialConnectError(new IOException("write read credits failed"));
+						onSerialConnectError(new IOException("Permission denied for writeCharacteristic", e));
 				}
 			}
 		}

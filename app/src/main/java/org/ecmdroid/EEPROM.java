@@ -114,15 +114,23 @@ public class EEPROM {
 			}
 			eeprom = new EEPROM(name);
 			int pc = 0;
+			int xsizeIdx = c.getColumnIndex("xsize");
+			int typeIdx = c.getColumnIndex("type");
+			int pageIdx = c.getColumnIndex("page");
+			int pgsizeIdx = c.getColumnIndex("pgsize");
+			if (xsizeIdx < 0 || typeIdx < 0 || pageIdx < 0 || pgsizeIdx < 0) {
+				c.close();
+				return null;
+			}
 			while (c.moveToNext()) {
 				if (eeprom.length == 0) {
-					eeprom.length = c.getInt(c.getColumnIndex("xsize"));
+					eeprom.length = c.getInt(xsizeIdx);
 					eeprom.xsize = eeprom.length;
-					eeprom.type = Type.getType(c.getString(c.getColumnIndex("type")));
+					eeprom.type = Type.getType(c.getString(typeIdx));
 					eeprom.data = new byte[eeprom.length];
 				}
-				int pnr = c.getInt(c.getColumnIndex("page"));
-				int sz = c.getInt(c.getColumnIndex("pgsize"));
+				int pnr = c.getInt(pageIdx);
+				int sz = c.getInt(pgsizeIdx);
 				Page pg = eeprom.new Page(pnr, sz);
 				if (pnr == 0) {
 					pg.start = eeprom.length - pg.length;
@@ -175,9 +183,12 @@ public class EEPROM {
 			db = helper.getReadableDatabase();
 			String query = "SELECT name FROM eeprom WHERE size = " + length + " OR xsize = " + length + " ORDER BY name";
 			c = db.rawQuery(query, null);
-			while (c.moveToNext()) {
-				name = c.getString(c.getColumnIndex("name"));
-				ret.add(name);
+			int nameIdx = c.getColumnIndex("name");
+			if (nameIdx >= 0) {
+				while (c.moveToNext()) {
+					name = c.getString(nameIdx);
+					ret.add(name);
+				}
 			}
 		} finally {
 			if (c != null) {

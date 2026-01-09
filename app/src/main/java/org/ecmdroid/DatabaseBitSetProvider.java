@@ -63,13 +63,25 @@ public class DatabaseBitSetProvider extends BitSetProvider {
 			// Log.d(TAG, "Query: " + query);
 			Cursor c = db.rawQuery(query, null);
 			if (c.moveToFirst()) {
-				String setname = c.getString(c.getColumnIndex("varname"));
-				String label = c.getString(c.getColumnIndex("name"));
-				int offset = c.getInt(c.getColumnIndex("offset"));
+				int varnameIdx = c.getColumnIndex("varname");
+				int nameIdx = c.getColumnIndex("name");
+				int offsetIdx = c.getColumnIndex("offset");
+				if (varnameIdx < 0 || nameIdx < 0 || offsetIdx < 0) {
+					c.close();
+					return null;
+				}
+				String setname = c.getString(varnameIdx);
+				String label = c.getString(nameIdx);
+				int offset = c.getInt(offsetIdx);
 				ret = new BitSet(setname, label, offset);
 				for (int i = 1; i <= 8; i++) {
-					String bitname = c.getString(c.getColumnIndex("bitname" + i));
-					String bitdesc = c.getString(c.getColumnIndex("bit" + i));
+					int bitnameIdx = c.getColumnIndex("bitname" + i);
+					int bitIdx = c.getColumnIndex("bit" + i);
+					if (bitnameIdx < 0 || bitIdx < 0) {
+						continue;
+					}
+					String bitname = c.getString(bitnameIdx);
+					String bitdesc = c.getString(bitIdx);
 					if (Utils.isEmptyString(bitname) && Utils.isEmptyString(bitdesc)) {
 						continue;
 					}
@@ -79,11 +91,20 @@ public class DatabaseBitSetProvider extends BitSetProvider {
 					Bit bit = new Bit();
 					bit.setName(bitname);
 					bit.setBitNr(i - 1);
-					bit.setByteNr(c.getInt(c.getColumnIndex("byte")));
+					int byteIdx = c.getColumnIndex("byte");
+					if (byteIdx >= 0) {
+						bit.setByteNr(c.getInt(byteIdx));
+					}
 					bit.setOffset(offset);
-					bit.setType(ECM.Type.getType(c.getString(c.getColumnIndex("type"))));
+					int typeIdx = c.getColumnIndex("type");
+					if (typeIdx >= 0) {
+						bit.setType(ECM.Type.getType(c.getString(typeIdx)));
+					}
 					bit.setRemark(bitdesc);
-					bit.setCode(c.getString(c.getColumnIndex("dtc" + i)));
+					int dtcIdx = c.getColumnIndex("dtc" + i);
+					if (dtcIdx >= 0) {
+						bit.setCode(c.getString(dtcIdx));
+					}
 					// Log.d(TAG, bit.toString());
 					ret.add(bit);
 				}

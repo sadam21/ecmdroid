@@ -67,8 +67,22 @@ public class DevicesFragment extends ListFragment {
 			public void onReceive(Context context, Intent intent) {
 				if (BluetoothDevice.ACTION_FOUND.equals(intent.getAction())) {
 					BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-					if (device.getType() != BluetoothDevice.DEVICE_TYPE_CLASSIC && getActivity() != null) {
-						getActivity().runOnUiThread(() -> updateScan(device));
+					if (device != null && getActivity() != null) {
+						try {
+							if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+								if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+									if (device.getType() != BluetoothDevice.DEVICE_TYPE_CLASSIC) {
+										getActivity().runOnUiThread(() -> updateScan(device));
+									}
+								}
+							} else {
+								if (device.getType() != BluetoothDevice.DEVICE_TYPE_CLASSIC) {
+									getActivity().runOnUiThread(() -> updateScan(device));
+								}
+							}
+						} catch (SecurityException e) {
+							// Permission denied, skip this device
+						}
 					}
 				}
 				if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(intent.getAction())) {
@@ -98,10 +112,22 @@ public class DevicesFragment extends ListFragment {
 					view = getActivity().getLayoutInflater().inflate(R.layout.device_list_item, parent, false);
 				TextView text1 = view.findViewById(R.id.text1);
 				TextView text2 = view.findViewById(R.id.text2);
-				if (device.getName() == null || device.getName().isEmpty())
+				String deviceName = null;
+				try {
+					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+						if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+							deviceName = device.getName();
+						}
+					} else {
+						deviceName = device.getName();
+					}
+				} catch (SecurityException e) {
+					// Permission denied
+				}
+				if (deviceName == null || deviceName.isEmpty())
 					text1.setText(getString(R.string.ble_unnamed));
 				else
-					text1.setText(device.getName());
+					text1.setText(deviceName);
 				text2.setText(device.getAddress());
 				return view;
 			}
@@ -112,7 +138,7 @@ public class DevicesFragment extends ListFragment {
 	public void onActivityCreated(Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
 		setListAdapter(null);
-		View header = getActivity().getLayoutInflater().inflate(R.layout.device_list_header, null, false);
+		View header = getActivity().getLayoutInflater().inflate(R.layout.device_list_header, getListView(), false);
 		getListView().addHeaderView(header, null, false);
 		setEmptyText(getString(R.string.ble_initializing));
 		((TextView) getListView().getEmptyView()).setTextSize(18);
@@ -240,13 +266,28 @@ public class DevicesFragment extends ListFragment {
 			leScanStopHandler.postDelayed(leScanStopCallback, LE_SCAN_PERIOD);
 			new AsyncTask<Void, Void, Void>() {
 				@Override
+				@SuppressLint("MissingPermission")
 				protected Void doInBackground(Void[] params) {
-					bluetoothAdapter.startLeScan(null, leScanCallback);
+					try {
+						bluetoothAdapter.startLeScan(null, leScanCallback);
+					} catch (SecurityException e) {
+						Log.e("DevicesFragment", "Permission denied for startLeScan", e);
+					}
 					return null;
 				}
 			}.execute(); // start async to prevent blocking UI, because startLeScan sometimes take some seconds
 		} else {
-			bluetoothAdapter.startDiscovery();
+			try {
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+					if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
+						bluetoothAdapter.startDiscovery();
+					}
+				} else {
+					bluetoothAdapter.startDiscovery();
+				}
+			} catch (SecurityException e) {
+				Log.e("DevicesFragment", "Permission denied for startDiscovery", e);
+			}
 		}
 	}
 
@@ -285,10 +326,30 @@ public class DevicesFragment extends ListFragment {
 		switch(scanState) {
 			case LE_SCAN:
 				leScanStopHandler.removeCallbacks(leScanStopCallback);
-				bluetoothAdapter.stopLeScan(leScanCallback);
+				try {
+					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+						if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
+							bluetoothAdapter.stopLeScan(leScanCallback);
+						}
+					} else {
+						bluetoothAdapter.stopLeScan(leScanCallback);
+					}
+				} catch (SecurityException e) {
+					Log.e("DevicesFragment", "Permission denied for stopLeScan", e);
+				}
 				break;
 			case DISCOVERY:
-				bluetoothAdapter.cancelDiscovery();
+				try {
+					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+						if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
+							bluetoothAdapter.cancelDiscovery();
+						}
+					} else {
+						bluetoothAdapter.cancelDiscovery();
+					}
+				} catch (SecurityException e) {
+					Log.e("DevicesFragment", "Permission denied for cancelDiscovery", e);
+				}
 				break;
 			default:
 				// already canceled
@@ -312,10 +373,24 @@ public class DevicesFragment extends ListFragment {
 	 * sort by name, then address. sort named devices first
 	 */
 	static int compareTo(BluetoothDevice a, BluetoothDevice b) {
-		boolean aValid = a.getName()!=null && !a.getName().isEmpty();
-		boolean bValid = b.getName()!=null && !b.getName().isEmpty();
+		String aName = null;
+		String bName = null;
+		try {
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+				// Permission check should be done by caller
+				aName = a.getName();
+				bName = b.getName();
+			} else {
+				aName = a.getName();
+				bName = b.getName();
+			}
+		} catch (SecurityException e) {
+			// Permission denied, use null names
+		}
+		boolean aValid = aName != null && !aName.isEmpty();
+		boolean bValid = bName != null && !bName.isEmpty();
 		if(aValid && bValid) {
-			int ret = a.getName().compareTo(b.getName());
+			int ret = aName.compareTo(bName);
 			if (ret != 0) return ret;
 			return a.getAddress().compareTo(b.getAddress());
 		}

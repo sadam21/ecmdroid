@@ -144,6 +144,11 @@ public class ECM {
 	public void connect(BluetoothDevice bluetoothDevice, Protocol protocol) throws IOException {
 		BluetoothSocket s = null;
 		try {
+			if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+				if (context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+					throw new IOException("BLUETOOTH_CONNECT permission not granted");
+				}
+			}
 			s = bluetoothDevice.createRfcommSocketToServiceRecord(uuid);
 
 			if (s != null) {
