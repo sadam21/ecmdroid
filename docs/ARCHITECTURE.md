@@ -6,7 +6,7 @@ The application follows a service-based architecture to handle background hardwa
 
 ### 1. Hardware Communication Layer
 - [**`ECM.java`**](../app/src/main/java/org/ecmdroid/ECM.java): The primary interface for all ECM operations. It manages connection state and executes high-level commands.
-- [**`PDU.java`**](../app/src/main/java/org/ecmdroid/PDU.java): Represents a Protocol Data Unit, the basic block of the ECM communication protocol.
+- [**`PDU.java`**](../app/src/main/java/org/ecmdroid/PDU.java): Represents a Protocol Data Unit, the basic block of the ECM communication protocol. See the [**Protocol Guide**](PROTOCOL_GUIDE.md) for frame details.
 - [**`DataChannelAdapter.java`**](../app/src/main/java/org/ecmdroid/DataChannelAdapter.java): Abstraction layer for transport methods (Bluetooth, BLE, USB).
 
 ### 2. Data Management

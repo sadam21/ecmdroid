@@ -16,6 +16,7 @@ EcmDroid is a diagnostic and configuration tool for Buell motorcycles with DDFI-
 - **UI**: Android Fragments within a single-activity architecture ([`MainActivity`](../app/src/main/java/org/ecmdroid/activities/MainActivity.java)).
 
 ## Communication
+- **Protocol**: Custom PDU-based serial protocol. See [**Protocol Guide**](PROTOCOL_GUIDE.md) for details.
 - **Bluetooth Serial**: Legacy Bluetooth adapters.
 - **Bluetooth Low Energy (BLE)**: Modern BLE-to-serial adapters.
 - **USB Serial**: USB OTG connection for wired adapters.
