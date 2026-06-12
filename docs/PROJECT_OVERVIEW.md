@@ -13,6 +13,7 @@ EcmDroid is a diagnostic and configuration tool for Buell motorcycles with DDFI-
 - **Language**: Java 8
 - **Android**: Min SDK 26, Target SDK 33.
 - **Build System**: Gradle with Kotlin DSL.
+- **Database**: SQLite for ECM definitions. See [**Database Schema**](DATABASE_SCHEMA.md).
 - **UI**: Android Fragments within a single-activity architecture ([`MainActivity`](../app/src/main/java/org/ecmdroid/activities/MainActivity.java)).
 
 ## Communication

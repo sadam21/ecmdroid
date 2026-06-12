@@ -12,7 +12,7 @@ The application follows a service-based architecture to handle background hardwa
 ### 2. Data Management
 - [**`EcmDroidService.java`**](../app/src/main/java/org/ecmdroid/EcmDroidService.java): A background service that manages the hardware connection. It contains a `ReaderThread` for continuous data polling and logging.
 - [**`EEPROM.java`**](../app/src/main/java/org/ecmdroid/EEPROM.java): Handles the engine's EEPROM data, including map parsing and checksum calculation.
-- [**`DBHelper.java`**](../app/src/main/java/org/ecmdroid/DBHelper.java): Manages the internal SQLite database (`ecmdroid.db`) which contains definitions for various ECM versions.
+- [**`DBHelper.java`**](../app/src/main/java/org/ecmdroid/DBHelper.java): Manages the internal SQLite database (`ecmdroid.db`). See the [**Database Schema**](DATABASE_SCHEMA.md) for table details.
 
 ### 3. User Interface
 - [**`MainActivity.java`**](../app/src/main/java/org/ecmdroid/activities/MainActivity.java): The main container using a `DrawerLayout` for navigation.
